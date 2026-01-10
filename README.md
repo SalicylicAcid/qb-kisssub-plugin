@@ -37,11 +37,6 @@
 3. **使用**:
    重启 qBittorrent（推荐），在搜索框输入关键词，选择 `Kisssub` 引擎（或“所有分类”）即可搜索。
 
-## 常见问题
-
-- **搜索无结果**: 请检查网络是否能正常访问 `kisssub.org`。
-- **乱码**: 插件已内置 HTML 转义字符处理，理论上不会出现乱码。
-
 ## 开发相关
 
 基于 Python 3 编写，依赖 qBittorrent 的 `novaprinter` 和 `helpers` 模块。
