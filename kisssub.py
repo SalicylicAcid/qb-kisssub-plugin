@@ -1,0 +1,111 @@
+# -*- coding: utf-8 -*-
+#VERSION: 1.0
+#AUTHORS: GitHub Copilot
+#LICENSE: MIT
+
+import xml.etree.ElementTree as ET
+import re
+import html
+import email.utils
+try:
+    from urllib.parse import quote, unquote
+except ImportError:
+    from urllib import quote, unquote
+
+# import qBT modules
+try:
+    from novaprinter import prettyPrinter
+    from helpers import retrieve_url
+except ImportError:
+    pass
+
+class kisssub(object):
+    """Class used by qBittorrent to search for torrents on Kisssub."""
+    
+    url = 'https://kisssub.org'
+    name = 'Kisssub'
+    supported_categories = {'all': '0'}
+    
+    def search(self, what, cat='all'):
+        # Construct RSS URL
+        # Format: https://kisssub.org/rss-<keyword1>+<keyword2>.xml
+        # If empty search, use default rss.xml
+        
+        if not what:
+            query_url = "https://kisssub.org/rss.xml"
+        else:
+            # Ensure "what" is properly URL encoded but not double-encoded
+            # qBittorrent might pass encoded strings, or raw strings
+            # Safest bet: Try to unquote then quote
+            try:
+                decoded_what = unquote(what)
+            except:
+                decoded_what = what
+            
+            query = quote(decoded_what)
+            query_url = "https://kisssub.org/rss-{}.xml".format(query)
+            
+        try:
+            # Download the XML data
+            xml_data = retrieve_url(query_url)
+            
+            # Sanitize XML: Fix unescaped ampersands common in RSS feeds
+            # This replaces '&' with '&amp;' unless it is already part of an entity
+            if xml_data:
+                xml_data = re.sub(r'&(?!(?:amp|lt|gt|quot|apos);)', '&amp;', xml_data)
+            
+            # Parse XML
+            root = ET.fromstring(xml_data)
+            
+            # Navigate to items
+            # RSS structure: <rss><channel><item>...
+            items = root.findall('./channel/item')
+            
+            for item in items:
+                res = {}
+                
+                # Title
+                title_node = item.find('title')
+                if title_node is not None:
+                    res['name'] = html.unescape(title_node.text)
+                else:
+                    continue
+
+                # Publish Date
+                pub_date_node = item.find('pubDate')
+                if pub_date_node is not None:
+                    try:
+                        dt = email.utils.parsedate_to_datetime(pub_date_node.text)
+                        res['pub_date'] = int(dt.timestamp())
+                    except:
+                        pass
+
+                # Download Link (in enclosure tag)
+                # <enclosure url="..." type="application/x-bittorrent" />
+                enclosure = item.find('enclosure')
+                if enclosure is not None:
+                    res['link'] = enclosure.attrib.get('url')
+                else:
+                    # Fallback to magnet or other link if enclosure is missing
+                    # But Kisssub RSS seems to rely on enclosure for the DL link
+                    continue
+                
+                # Description Link (Details page)
+                link_node = item.find('link')
+                if link_node is not None:
+                    res['desc_link'] = link_node.text
+                else:
+                    res['desc_link'] = self.url
+                
+                # Size, Seeds, Leech are not available in this RSS feed
+                # Setting them to default values indicating unknown
+                res['size'] = "Unknown"
+                res['seeds'] = "-1"
+                res['leech'] = "-1"
+                res['engine_url'] = self.url
+                
+                # Output the result
+                prettyPrinter(res)
+                
+        except Exception:
+            pass
