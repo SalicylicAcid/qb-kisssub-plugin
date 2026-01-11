@@ -88,7 +88,7 @@ class kisssub(object):
                     url = enclosure.attrib.get('url')
                     match = re.search(r'hash=([a-fA-F0-9]{40})', url)
                     if match:
-                        res['link'] = "magnet:?xt=urn:btih:" + match.group(1)
+                        res['link'] = "magnet:?xt=urn:btih:" + match.group(1) + "&tr=http://open.acgtracker.com:1096/announce"
                     else:
                         res['link'] = url
                 else:
