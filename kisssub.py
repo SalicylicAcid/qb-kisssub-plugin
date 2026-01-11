@@ -84,7 +84,13 @@ class kisssub(object):
                 # <enclosure url="..." type="application/x-bittorrent" />
                 enclosure = item.find('enclosure')
                 if enclosure is not None:
-                    res['link'] = enclosure.attrib.get('url')
+                    # check if it is a hash link and convert to magnet
+                    url = enclosure.attrib.get('url')
+                    match = re.search(r'hash=([a-fA-F0-9]{40})', url)
+                    if match:
+                        res['link'] = "magnet:?xt=urn:btih:" + match.group(1)
+                    else:
+                        res['link'] = url
                 else:
                     # Fallback to magnet or other link if enclosure is missing
                     # But Kisssub RSS seems to rely on enclosure for the DL link
