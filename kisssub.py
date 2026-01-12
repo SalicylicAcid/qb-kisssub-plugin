@@ -73,12 +73,23 @@ class kisssub(object):
 
                 # Publish Date
                 pub_date_node = item.find('pubDate')
-                if pub_date_node is not None:
+                if pub_date_node is not None and pub_date_node.text:
                     try:
                         dt = email.utils.parsedate_to_datetime(pub_date_node.text)
                         res['pub_date'] = int(dt.timestamp())
-                    except:
-                        pass
+                    except Exception as e:
+                        # Try alternative date formats if standard parsing fails
+                        date_str = pub_date_node.text.strip()
+                        # Try common formats: YYYY-MM-DD HH:MM:SS, YYYY/MM/DD, etc.
+                        for fmt in ('%Y-%m-%d %H:%M:%S', '%Y/%m/%d %H:%M:%S', 
+                                   '%Y-%m-%d', '%Y/%m/%d', '%d-%m-%Y', '%d/%m/%Y'):
+                            try:
+                                import datetime
+                                dt = datetime.datetime.strptime(date_str, fmt)
+                                res['pub_date'] = int(dt.timestamp())
+                                break
+                            except ValueError:
+                                continue
 
                 # Download Link (in enclosure tag)
                 # <enclosure url="..." type="application/x-bittorrent" />
